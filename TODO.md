@@ -1,5 +1,12 @@
 # TODO - Open Tren
 
+## Fetchers (`src/fetchers/`)
+
+- [ ] **Validación de respuestas con Pydantic**
+  - Crear modelos Pydantic para cada respuesta de API (GTFS-RT, Avisos, GTFS estático)
+  - Validar estructura mínima antes de procesar
+  - Requiere conocer bien los esquemas reales de las APIs de Renfe
+
 ## Models (`src/models/schemas.py`)
 
 ### Circulacion Model
