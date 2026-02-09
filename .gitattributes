@@ -1,0 +1,11 @@
+# Text files
+*.py text
+*.md text
+*.yml text
+*.yaml text
+*.json text
+*.txt text
+*.toml text
+
+# Line endings
+* text=auto eol=lf
