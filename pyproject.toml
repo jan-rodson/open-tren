@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "Dashboard de puntualidad ferroviaria en España"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
 
 [build-system]
 requires = ["hatchling"]
@@ -17,3 +22,6 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
