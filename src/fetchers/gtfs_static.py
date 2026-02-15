@@ -1,14 +1,15 @@
 """Fetcher para GTFS estático de Renfe."""
 
 import zipfile
+from datetime import UTC, datetime
 from io import BytesIO
-from typing import Any, ClassVar
+from typing import ClassVar, override
 
 from ..config import GTFS_STATIC_URL
 from .base import BaseFetcher, FetcherError, FetcherResult
 
 
-class GtfsStaticFetcher(BaseFetcher):
+class GtfsStaticFetcher(BaseFetcher[bytes]):
     """Fetcher para el GTFS estático de Renfe (archivo ZIP)."""
 
     DEFAULT_TIMEOUT: ClassVar[float] = 60.0  # Más tiempo porque es un ZIP
@@ -18,15 +19,24 @@ class GtfsStaticFetcher(BaseFetcher):
         {"trips.txt", "stop_times.txt", "stops.txt", "routes.txt"}
     )
 
+    url: str
+
     def __init__(
         self,
+        user_agent: str,
         url: str = GTFS_STATIC_URL,
-        **kwargs: Any,
+        timeout: float = BaseFetcher.DEFAULT_TIMEOUT,
+        max_retries: int = BaseFetcher.MAX_RETRIES,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(
+            user_agent=user_agent,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
         self.url = url
 
-    async def fetch(self) -> FetcherResult:
+    @override
+    async def fetch(self) -> FetcherResult[bytes]:
         """
         Obtiene el archivo GTFS estático de Renfe.
 
@@ -36,11 +46,12 @@ class GtfsStaticFetcher(BaseFetcher):
         Raises:
             FetcherError: Si hay error al obtener los datos o el contenido no es un ZIP válido.
         """
-        result = await self._http_get(self.url, as_json=False)
+        response = await self._http_get(self.url)
+        data = response.content
 
         # Validar que es un ZIP válido con archivos GTFS requeridos
         try:
-            with zipfile.ZipFile(BytesIO(result.data)) as zf:
+            with zipfile.ZipFile(BytesIO(data)) as zf:
                 files = set(zf.namelist())
                 if not self.REQUIRED_GTFS_FILES.issubset(files):
                     missing = self.REQUIRED_GTFS_FILES - files
@@ -54,4 +65,9 @@ class GtfsStaticFetcher(BaseFetcher):
                 url=self.url,
             ) from e
 
-        return result
+        return FetcherResult(
+            data=data,
+            timestamp=datetime.now(UTC),
+            url=str(response.url),
+            status_code=response.status_code,
+        )

@@ -23,11 +23,11 @@ Esta fase tenía como propósito validar la viabilidad técnica del proyecto ant
 
 La exploración se realizó mediante:
 
-| Herramienta | Uso |
-|-------------|-----|
-| `curl` + `jq`/`python3` | Peticiones directas a APIs y parsing de JSON |
-| Web search | Búsqueda de contexto legal y documentación |
-| CKAN API (`data.renfe.com/api/3/`) | Listado y metadatos de datasets |
+| Herramienta                        | Uso                                          |
+| ---------------------------------- | -------------------------------------------- |
+| `curl` + `jq`/`python3`            | Peticiones directas a APIs y parsing de JSON |
+| Web search                         | Búsqueda de contexto legal y documentación   |
+| CKAN API (`data.renfe.com/api/3/`) | Listado y metadatos de datasets              |
 
 ---
 
@@ -35,16 +35,17 @@ La exploración se realizó mediante:
 
 ### 3.1 Feed de Tiempo Real (GTFS-RT)
 
-| Campo | Valor |
-|-------|-------|
-| **URL** | `https://gtfsrt.renfe.com/trip_updates_LD.json` |
-| **Método** | GET |
-| **Formato** | JSON (GTFS Realtime simplificado) |
-| **Actualización** | Cada ~30 segundos |
-| **Tamaño** | ~100-200 KB por snapshot |
-| **Licencia** | CC-BY-4.0 |
+| Campo             | Valor                                           |
+| ----------------- | ----------------------------------------------- |
+| **URL**           | `https://gtfsrt.renfe.com/trip_updates_LD.json` |
+| **Método**        | GET                                             |
+| **Formato**       | JSON (GTFS Realtime simplificado)               |
+| **Actualización** | Cada ~30 segundos                               |
+| **Tamaño**        | ~100-200 KB por snapshot                        |
+| **Licencia**      | CC-BY-4.0                                       |
 
 **Estructura de respuesta:**
+
 ```json
 {
   "header": {
@@ -67,6 +68,7 @@ La exploración se realizó mediante:
 ```
 
 **Campos disponibles:**
+
 - `tripId`: Identificador único del viaje (formato: `[número tren]-[YYYY]-[MM]-[DD]`)
 - `delay`: Retraso en **segundos** (positivo = retraso, negativo = adelanto)
 
@@ -74,7 +76,7 @@ La exploración se realizó mediante:
 
 El feed GTFS-RT de Renfe **solo contiene trenes con retrasos o incidencias activas**. Si un tren va según horario programado, no aparece en el feed.
 
-*Ejemplo real:* Un snapshot tomado el 2026-02-08 contenía 634 entidades, pero ninguna correspondía a esa fecha - todas eran de 2026-02-06 y 2026-02-07 (trenes con incidencias aún activas de días anteriores).
+_Ejemplo real:_ Un snapshot tomado el 2026-02-08 contenía 634 entidades, pero ninguna correspondía a esa fecha - todas eran de 2026-02-06 y 2026-02-07 (trenes con incidencias aún activas de días anteriores).
 
 Esto significa que para obtener el **estado completo de la red** es necesario:
 
@@ -86,13 +88,13 @@ Esto significa que para obtener el **estado completo de la red** es necesario:
 
 ### 3.2 GTFS Estático (Horarios Programados)
 
-| Campo | Valor |
-|-------|-------|
-| **URL** | `https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip` |
-| **Formato** | ZIP conteniendo archivos GTFS (.txt) |
-| **Actualización** | Diaria (según metadatos) |
-| **Tamaño** | ~800 KB comprimido, ~42 MB descomprimido |
-| **Licencia** | CC-BY-4.0 |
+| Campo             | Valor                                                             |
+| ----------------- | ----------------------------------------------------------------- |
+| **URL**           | `https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip` |
+| **Formato**       | ZIP conteniendo archivos GTFS (.txt)                              |
+| **Actualización** | Diaria (según metadatos)                                          |
+| **Tamaño**        | ~800 KB comprimido, ~42 MB descomprimido                          |
+| **Licencia**      | CC-BY-4.0                                                         |
 
 **Archivos incluidos:**
 | Archivo | Tamaño | Descripción |
@@ -106,23 +108,27 @@ Esto significa que para obtener el **estado completo de la red** es necesario:
 | `calendar_dates.txt` | 20 MB | Excepciones y fechas específicas |
 
 **Estructura de `trips.txt`:**
+
 ```csv
 route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id,wheelchair_accessible
 1700037606GL023,2026-02-082026-02-13001901,0019012026-02-08,,00190,,,1
 ```
 
 **Campos clave:**
+
 - `trip_id`: Identificador que cruza con GTFS-RT (ej: `0019012026-02-08`)
 - `trip_short_name`: Código de tren visible para usuarios (ej: `00190`)
 - `route_id`: Identificador de ruta para cruzar con `routes.txt`
 
 **Estructura de `routes.txt`:**
+
 ```csv
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
 1700037606GL023,1071,ALVIA,,,2,,F2F5F5,
 ```
 
 **Tipos de servicio encontrados:**
+
 - AVE
 - ALVIA
 - AVLO
@@ -135,13 +141,14 @@ route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_
 
 ### 3.3 Feed de Avisos e Incidencias
 
-| Campo | Valor |
-|-------|-------|
-| **URL** | `https://www.renfe.com/content/renfe/es/es/grupo-renfe/comunicacion/renfe-al-dia/avisos/jcr:content/root/responsivegrid/rfincidentreports_co.noticeresults.json` |
-| **Formato** | JSON |
-| **Actualización** | Eventual (cuando hay avisos nuevos) |
+| Campo             | Valor                                                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **URL**           | `https://www.renfe.com/content/renfe/es/es/grupo-renfe/comunicacion/renfe-al-dia/avisos/jcr:content/root/responsivegrid/rfincidentreports_co.noticeresults.json` |
+| **Formato**       | JSON                                                                                                                                                             |
+| **Actualización** | Eventual (cuando hay avisos nuevos)                                                                                                                              |
 
 **Estructura de respuesta:**
+
 ```json
 [
   {
@@ -149,15 +156,14 @@ route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_
     "chipText": "Desde el 16 de febrero",
     "aspect": "primary",
     "link": "/es/es/grupo-renfe/comunicacion/renfe-al-dia/avisos/...",
-    "tags": [
-      {"text": "Aragón"}
-    ],
+    "tags": [{ "text": "Aragón" }],
     "target": "_self"
   }
 ]
 ```
 
 **Tipos de incidencias encontradas:**
+
 - Obras de infraestructura (Adif)
 - Modificaciones horarias temporales
 - Servicios alternativos por carretera (autobuses)
@@ -177,6 +183,7 @@ El formato del `trip_id` es consistente entre GTFS estático y GTFS-RT:
 ```
 
 Ejemplos:
+
 - `0019012026-02-08` → Tren 00190 del 8 de febrero de 2026
 - `3716712026-02-06` → Tren 37167 del 6 de febrero de 2026
 
@@ -217,14 +224,14 @@ def obtener_estado_completo(fecha):
 
 Fuente: [data.renfe.com/legal](https://data.renfe.com/legal)
 
-| Condición | Requisito |
-|-----------|-----------|
-| **Uso permitido** | Fines comerciales y no comerciales |
-| **Atribución obligatoria** | "Origen de los datos: Renfe Operadora" |
-| **Fecha de actualización** | Incluir cuando esté disponible |
-| **Sin implicación de patrocinio** | No sugerir que Renfe apoya el proyecto |
-| **Metadatos** | Conservar sin alterar |
-| **Responsabilidad** | Uso bajo cuenta y riesgo del reutilizador |
+| Condición                         | Requisito                                 |
+| --------------------------------- | ----------------------------------------- |
+| **Uso permitido**                 | Fines comerciales y no comerciales        |
+| **Atribución obligatoria**        | "Origen de los datos: Renfe Operadora"    |
+| **Fecha de actualización**        | Incluir cuando esté disponible            |
+| **Sin implicación de patrocinio** | No sugerir que Renfe apoya el proyecto    |
+| **Metadatos**                     | Conservar sin alterar                     |
+| **Responsabilidad**               | Uso bajo cuenta y riesgo del reutilizador |
 
 ### 5.2 Licencia
 
@@ -243,6 +250,7 @@ Fuente: [Compromisos Renfe UE](https://www.renfe.com/content/dam/renfe/en/legal-
 ### 5.4 Garantías
 
 Renfe **NO garantiza**:
+
 - Continuidad en la disponibilidad de los datos
 - Ausencia de errores u omisiones
 - Actualización en intervalos específicos
@@ -255,27 +263,27 @@ Renfe **NO garantiza**:
 
 ### 6.1 Feed GTFS-RT
 
-| Período | Snapshots | Tamaño por snapshot | Total estimado |
-|---------|-----------|---------------------|----------------|
-| 5 min | 1 | ~150 KB | 150 KB |
-| 1 hora | 12 | ~150 KB | 1.8 MB |
-| 1 día | 288 | ~150 KB | 43 MB (JSON crudo) |
-| 1 día | 288 | ~150 KB | ~3-5 MB (Parquet comprimido) |
-| 1 mes | ~8,640 | - | ~90-150 MB (Parquet) |
-| 1 año | ~105,000 | - | ~1-1.8 GB (Parquet) |
+| Período | Snapshots | Tamaño por snapshot | Total estimado               |
+| ------- | --------- | ------------------- | ---------------------------- |
+| 5 min   | 1         | ~150 KB             | 150 KB                       |
+| 1 hora  | 12        | ~150 KB             | 1.8 MB                       |
+| 1 día   | 288       | ~150 KB             | 43 MB (JSON crudo)           |
+| 1 día   | 288       | ~150 KB             | ~3-5 MB (Parquet comprimido) |
+| 1 mes   | ~8,640    | -                   | ~90-150 MB (Parquet)         |
+| 1 año   | ~105,000  | -                   | ~1-1.8 GB (Parquet)          |
 
 ### 6.2 Feed de Avisos
 
-| Período | Estimación |
-|---------|------------|
-| Por snapshot | ~10-50 KB |
-| Por mes | ~1-5 MB |
+| Período      | Estimación |
+| ------------ | ---------- |
+| Por snapshot | ~10-50 KB  |
+| Por mes      | ~1-5 MB    |
 
 ### 6.3 GTFS Estático
 
-| Archivo | Tamaño | Frecuencia de actualización |
-|---------|--------|----------------------------|
-| ZIP completo | 800 KB | ~1 vez al día |
+| Archivo      | Tamaño | Frecuencia de actualización |
+| ------------ | ------ | --------------------------- |
+| ZIP completo | 800 KB | ~1 vez al día               |
 
 **Estrategia:** Descargar semanalmente; almacenar solo la versión más reciente.
 
@@ -313,11 +321,11 @@ Ejemplo: `1770496280` → 2026-02-08 ~10:30 UTC
 
 **Decisión:** Capturar cada **5 minutos**
 
-| Opción | Ventajas | Desventajas |
-|--------|----------|-------------|
-| 30 seg (frecuencia real) | Máxima resolución | Datos demasiado voluminosos |
-| 5 min | Balance resolución/volumen | ✅ **ELEGIDA** |
-| 15 min | Menor volumen | Puede perder eventos |
+| Opción                   | Ventajas                   | Desventajas                 |
+| ------------------------ | -------------------------- | --------------------------- |
+| 30 seg (frecuencia real) | Máxima resolución          | Datos demasiado voluminosos |
+| 5 min                    | Balance resolución/volumen | ✅ **ELEGIDA**              |
+| 15 min                   | Menor volumen              | Puede perder eventos        |
 
 **Justificación:** El feed se actualiza cada 30 seg, pero para análisis de retrasos ferroviarios, 5 min ofrece resolución suficiente sin sobrecargar almacenamiento.
 
@@ -348,14 +356,14 @@ data/processed/circulaciones/
 
 ## 9. Riesgos Identificados y Mitigación
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|--------------|---------|------------|
-| Endpoint cambia sin aviso | Media | Alto | Monitoreo + alertas; almacenar snapshots crudos |
-| Rate limiting | Baja | Medio | Empezar con 5 min; reducir si hay problemas |
-| Feed cae (errores 5xx) | Media | Medio | Reintentos exponenciales; alertas |
-| Datos inconsistentes | Media | Bajo | Validación; limpieza de outliers |
-| Formato de trip_id cambia | Baja | Alto | Versionado de schema; tests de regresión |
-| Cambio a Protobuf | Baja | Medio | Parser flexible; detección automática de formato |
+| Riesgo                    | Probabilidad | Impacto | Mitigación                                       |
+| ------------------------- | ------------ | ------- | ------------------------------------------------ |
+| Endpoint cambia sin aviso | Media        | Alto    | Monitoreo + alertas; almacenar snapshots crudos  |
+| Rate limiting             | Baja         | Medio   | Empezar con 5 min; reducir si hay problemas      |
+| Feed cae (errores 5xx)    | Media        | Medio   | Reintentos exponenciales; alertas                |
+| Datos inconsistentes      | Media        | Bajo    | Validación; limpieza de outliers                 |
+| Formato de trip_id cambia | Baja         | Alto    | Versionado de schema; tests de regresión         |
+| Cambio a Protobuf         | Baja         | Medio   | Parser flexible; detección automática de formato |
 
 ---
 
@@ -363,24 +371,24 @@ data/processed/circulaciones/
 
 ### 10.1 Viabilidad del Proyecto
 
-| Aspecto | Estado |
-|---------|--------|
-| Disponibilidad de datos tiempo real | ✅ Confirmada |
-| Calidad de datos | ✅ Adecuada |
-| Marco legal | ✅ Favorable |
-| Volumen de datos | ✅ Gestionable |
-| Complejidad técnica | ✅ Media (afrontable) |
+| Aspecto                             | Estado                |
+| ----------------------------------- | --------------------- |
+| Disponibilidad de datos tiempo real | ✅ Confirmada         |
+| Calidad de datos                    | ✅ Adecuada           |
+| Marco legal                         | ✅ Favorable          |
+| Volumen de datos                    | ✅ Gestionable        |
+| Complejidad técnica                 | ✅ Media (afrontable) |
 
 **Decisión:** ✅ **GO** - Proceder con Fase 1 (Pipeline de Ingesta)
 
 ### 10.2 Cambios Respecto al Plan Inicial
 
-| Aspecto | Plan original | Descubrimiento | Ajuste necesario |
-|---------|---------------|----------------|------------------|
-| Contenido del GTFS-RT | Estado completo de todos los trenes | Solo trenes con retraso | Cruce con GTFS estático obligatorio |
-| Formato GTFS-RT | Protobuf | JSON | Más simple de lo previsto |
-| Geolocalización | Incluida en feed | No disponible | Omitir en MVP |
-| Frecuencia de actualización | A determinar | 30 segundos | Usar 5 min para captura |
+| Aspecto                     | Plan original                       | Descubrimiento          | Ajuste necesario                    |
+| --------------------------- | ----------------------------------- | ----------------------- | ----------------------------------- |
+| Contenido del GTFS-RT       | Estado completo de todos los trenes | Solo trenes con retraso | Cruce con GTFS estático obligatorio |
+| Formato GTFS-RT             | Protobuf                            | JSON                    | Más simple de lo previsto           |
+| Geolocalización             | Incluida en feed                    | No disponible           | Omitir en MVP                       |
+| Frecuencia de actualización | A determinar                        | 30 segundos             | Usar 5 min para captura             |
 
 ---
 
@@ -395,6 +403,7 @@ Con la fase 0 completada, la Fase 1 consistirá en:
 5. **GitHub Actions** - Automatización de capturas cada 5 min
 
 **Hitos de la Fase 1:**
+
 - Día 1-2: Setup + fetchers básicos
 - Día 3-4: Procesador + almacenamiento
 - Día 5: GitHub Actions funcionando

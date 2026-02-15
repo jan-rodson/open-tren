@@ -10,14 +10,14 @@ from src.fetchers import FetcherError, GtfsRtFetcher
 
 
 @pytest.mark.asyncio
-async def test_fetch_success(sample_gtfs_rt_response):
+async def test_fetch_success(sample_gtfs_rt_response: dict[str, object], test_user_agent: str):
     """Test de fetch exitoso."""
     url = "https://gtfsrt.renfe.com/trip_updates_LD.json"
 
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(200, json=sample_gtfs_rt_response))
 
-        fetcher = GtfsRtFetcher(url=url)
+        fetcher = GtfsRtFetcher(user_agent=test_user_agent, url=url)
         result = await fetcher.fetch()
 
         assert result.data == sample_gtfs_rt_response
@@ -27,27 +27,29 @@ async def test_fetch_success(sample_gtfs_rt_response):
 
 
 @pytest.mark.asyncio
-async def test_fetch_with_context_manager(sample_gtfs_rt_response):
+async def test_fetch_with_context_manager(
+    sample_gtfs_rt_response: dict[str, object], test_user_agent: str
+):
     """Test usando context manager."""
     url = "https://gtfsrt.renfe.com/trip_updates_LD.json"
 
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(200, json=sample_gtfs_rt_response))
 
-        async with GtfsRtFetcher(url=url) as fetcher:
+        async with GtfsRtFetcher(user_agent=test_user_agent, url=url) as fetcher:
             result = await fetcher.fetch()
             assert result.data == sample_gtfs_rt_response
 
 
 @pytest.mark.asyncio
-async def test_fetch_http_error():
+async def test_fetch_http_error(test_user_agent: str):
     """Test de manejo de errores HTTP."""
     url = "https://gtfsrt.renfe.com/trip_updates_LD.json"
 
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(404))
 
-        fetcher = GtfsRtFetcher(url=url)
+        fetcher = GtfsRtFetcher(user_agent=test_user_agent, url=url)
 
         with pytest.raises(FetcherError) as exc_info:
             await fetcher.fetch()
@@ -57,14 +59,14 @@ async def test_fetch_http_error():
 
 
 @pytest.mark.asyncio
-async def test_fetch_timeout():
+async def test_fetch_timeout(test_user_agent: str):
     """Test de manejo de timeout."""
     url = "https://gtfsrt.renfe.com/trip_updates_LD.json"
 
     with respx.mock:
         respx.get(url).mock(side_effect=httpx.ConnectTimeout("Connection timeout"))
 
-        fetcher = GtfsRtFetcher(url=url, timeout=0.1)
+        fetcher = GtfsRtFetcher(user_agent=test_user_agent, url=url, timeout=0.1)
 
         with pytest.raises(FetcherError) as exc_info:
             await fetcher.fetch()
@@ -73,7 +75,7 @@ async def test_fetch_timeout():
 
 
 @pytest.mark.asyncio
-async def test_retry_on_failure_then_success():
+async def test_retry_on_failure_then_success(test_user_agent: str):
     """Test verifica que reintenta 2 veces antes de conseguir éxito."""
     url = "https://gtfsrt.renfe.com/trip_updates_LD.json"
     call_count = 0
@@ -88,7 +90,7 @@ async def test_retry_on_failure_then_success():
     with respx.mock:
         respx.get(url).mock(side_effect=failing_then_success)
 
-        fetcher = GtfsRtFetcher(url=url, max_retries=3)
+        fetcher = GtfsRtFetcher(user_agent=test_user_agent, url=url, max_retries=3)
         result = await fetcher.fetch()
 
         assert call_count == 3  # 2 fallos + 1 éxito

@@ -8,14 +8,14 @@ from src.fetchers import AvisosFetcher, FetcherError
 
 
 @pytest.mark.asyncio
-async def test_fetch_avisos_success(sample_avisos_response):
+async def test_fetch_avisos_success(sample_avisos_response: list[object], test_user_agent: str):
     """Test de fetch exitoso de avisos."""
     url = "https://www.renfe.com/.../json"
 
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(200, json=sample_avisos_response))
 
-        fetcher = AvisosFetcher(url=url)
+        fetcher = AvisosFetcher(user_agent=test_user_agent, url=url)
         result = await fetcher.fetch()
 
         assert result.data == sample_avisos_response
@@ -23,28 +23,29 @@ async def test_fetch_avisos_success(sample_avisos_response):
 
 
 @pytest.mark.asyncio
-async def test_fetch_avisos_empty():
+async def test_fetch_avisos_empty(test_user_agent: str):
     """Test de respuesta vacía."""
     url = "https://www.renfe.com/.../json"
 
     with respx.mock:
-        respx.get(url).mock(return_value=httpx.Response(200, json=[]))
+        route = respx.get(url).mock(return_value=httpx.Response(200, json=[]))
 
-        fetcher = AvisosFetcher(url=url)
+        fetcher = AvisosFetcher(user_agent=test_user_agent, url=url)
         result = await fetcher.fetch()
 
         assert result.data == []
+        _ = route.call_count  # type: ignore[unused-call-result]
 
 
 @pytest.mark.asyncio
-async def test_fetch_avisos_error():
+async def test_fetch_avisos_error(test_user_agent: str):
     """Test de error al obtener avisos."""
     url = "https://www.renfe.com/.../json"
 
     with respx.mock:
-        respx.get(url).mock(return_value=httpx.Response(500))
+        _ = respx.get(url).mock(return_value=httpx.Response(500))  # type: ignore[assignment]
 
-        fetcher = AvisosFetcher(url=url)
+        fetcher = AvisosFetcher(user_agent=test_user_agent, url=url)
 
         with pytest.raises(FetcherError) as exc_info:
             await fetcher.fetch()

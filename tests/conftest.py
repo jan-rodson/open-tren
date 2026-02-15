@@ -6,7 +6,13 @@ pytest_plugins = ["pytest_asyncio"]
 
 
 @pytest.fixture
-def sample_gtfs_rt_response() -> dict:
+def test_user_agent() -> str:
+    """User agent para tests."""
+    return "TestAgent/1.0"
+
+
+@pytest.fixture
+def sample_gtfs_rt_response() -> dict[str, object]:
     """Datos de ejemplo del feed GTFS-RT."""
     return {
         "header": {
@@ -26,7 +32,7 @@ def sample_gtfs_rt_response() -> dict:
 
 
 @pytest.fixture
-def sample_avisos_response() -> list:
+def sample_avisos_response() -> list[object]:
     """Datos de ejemplo del feed de avisos."""
     return [
         {

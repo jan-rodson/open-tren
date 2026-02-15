@@ -1,12 +1,11 @@
 """Clases base y excepciones para fetchers."""
 
-import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from types import TracebackType
-from typing import Self
+from typing import Any, ClassVar, Generic, Self, TypeVar
 
 import httpx
 from tenacity import (
@@ -18,9 +17,15 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T", bytes, dict[str, Any], list[Any])
+
 
 class FetcherError(Exception):
     """Excepción base para errores en fetchers."""
+
+    message: str
+    status_code: int | None
+    url: str | None
 
     def __init__(
         self,
@@ -43,62 +48,38 @@ class FetcherError(Exception):
 
 
 @dataclass(frozen=True)
-class FetcherResult:
+class FetcherResult(Generic[T]):
     """Resultado inmutable de una operación de fetch."""
 
-    data: bytes | dict | list
+    data: T
     timestamp: datetime
     url: str
     status_code: int = 200
 
-    @classmethod
-    def from_response(cls, response: httpx.Response, as_json: bool = True) -> Self:
-        """Crea un FetcherResult desde una respuesta httpx.
 
-        Raises:
-            FetcherError: Si as_json=True y la respuesta no es JSON válido.
-        """
-        url = str(response.url)
-        status = response.status_code
-
-        try:
-            data = response.json() if as_json else response.content
-        except json.JSONDecodeError as e:
-            raise FetcherError(
-                f"JSON inválido en respuesta: {e.msg}",
-                status_code=status,
-                url=url,
-            ) from e
-
-        return cls(
-            data=data,
-            timestamp=datetime.now(UTC),
-            url=url,
-            status_code=status,
-        )
-
-
-class BaseFetcher(ABC):
+class BaseFetcher(ABC, Generic[T]):
     """Clase base para fetchers de APIs HTTP."""
 
-    DEFAULT_TIMEOUT = 30.0
-    MAX_RETRIES = 3
+    DEFAULT_TIMEOUT: ClassVar[float] = 30.0
+    MAX_RETRIES: ClassVar[int] = 3
+
+    timeout: float
+    user_agent: str
+    max_retries: int
 
     def __init__(
         self,
+        user_agent: str,
         timeout: float = DEFAULT_TIMEOUT,
-        user_agent: str | None = None,
         max_retries: int = MAX_RETRIES,
     ) -> None:
         self.timeout = timeout
-        self.user_agent = user_agent or (
-            "Mozilla/5.0 (compatible; OpenTren/0.1.0; +https://github.com/javierjulian/open-tren)"
-        )
+        self.user_agent = user_agent
         self.max_retries = max_retries
         self._client: httpx.AsyncClient | None = None
 
     @abstractmethod
-    async def fetch(self) -> FetcherResult:
+    async def fetch(self) -> FetcherResult[T]:
         """Obtiene datos del endpoint. Debe ser implementado por subclases."""
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -108,23 +89,18 @@ class BaseFetcher(ABC):
             self._client = httpx.AsyncClient(timeout=self.timeout, headers=headers)
         return self._client
 
-    async def _http_get(self, url: str, as_json: bool = True) -> FetcherResult:
+    async def _http_get(self, url: str) -> httpx.Response:
         """Realiza petición GET HTTP con reintentos.
 
         Args:
             url: URL a la que hacer la petición.
-            as_json: Si True, parsea la respuesta como JSON; si False, retorna bytes.
 
         Returns:
-            FetcherResult con los datos de la respuesta.
+            Respuesta HTTP completa para que el fetcher procese los datos.
 
         Raises:
             FetcherError: Si después de los reintentos la petición falla.
         """
-        # Nota: Se crea el retryer en cada llamada. Aceptable porque:
-        # - Tenacity cachea internamente, el overhead es mínimo
-        # - Las peticiones son infrecuentes (cada 5 min)
-        # - Mantiene el código más legible y simple
         retryer = retry(
             stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential(multiplier=1, max=10),
@@ -133,11 +109,11 @@ class BaseFetcher(ABC):
         )
 
         @retryer
-        async def _do_request() -> FetcherResult:
+        async def _do_request() -> httpx.Response:
             client = await self._get_client()
             response = await client.get(url)
             response.raise_for_status()
-            return FetcherResult.from_response(response, as_json=as_json)
+            return response
 
         try:
             return await _do_request()
