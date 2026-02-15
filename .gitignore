@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environments
+# Virtual environments (uv uses .venv)
 .venv/
 venv/
 env/
@@ -15,11 +15,28 @@ env/
 *.swo
 *~
 
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+*.cover
+
+# Linting / Formatting
+.ruff_cache/
+
 # OS
 .DS_Store
 Thumbs.db
 
-# Distribution
+# Distribution / Packaging
 dist/
 build/
 *.egg-info/
