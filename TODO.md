@@ -1,6 +1,6 @@
 # TODO - Open Tren
 
-## Fetchers (`src/fetchers/`)
+## Processors(`src/processors/`)
 
 - [ ] **Validación de respuestas con Pydantic**
   - Crear modelos Pydantic para cada respuesta de API (GTFS-RT, Avisos, GTFS estático)
