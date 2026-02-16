@@ -6,7 +6,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from src.config import GTFS_DIR
+from src.config import DEFAULT_USER_AGENT, GTFS_DIR
 from src.fetchers import FetcherError, GtfsStaticFetcher
 
 logging.basicConfig(
@@ -44,7 +44,7 @@ def save_gtfs(content: bytes, timestamp: datetime, output_dir: Path = GTFS_DIR) 
 async def main() -> None:
     """Función principal."""
     try:
-        async with GtfsStaticFetcher() as fetcher:
+        async with GtfsStaticFetcher(user_agent=DEFAULT_USER_AGENT) as fetcher:
             result = await fetcher.fetch()
             extract_dir = save_gtfs(result.data, result.timestamp)
             logger.info("GTFS actualizado: %s", extract_dir)

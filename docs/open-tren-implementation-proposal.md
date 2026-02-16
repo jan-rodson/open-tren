@@ -16,14 +16,14 @@
 
 ### Trenes a procesar
 
-| Tipo de servicio | Trenes/día aproximados |
-|------------------|------------------------|
-| AVE | ~180 |
-| AVLO | ~40 |
-| ALVIA | ~120 |
-| EUROMED | ~20 |
-| MD (Media Distancia) | ~400 |
-| **Total AV/LD/MD** | **~750-800 trenes/día** |
+| Tipo de servicio     | Trenes/día aproximados  |
+| -------------------- | ----------------------- |
+| AVE                  | ~180                    |
+| AVLO                 | ~40                     |
+| ALVIA                | ~120                    |
+| EUROMED              | ~20                     |
+| MD (Media Distancia) | ~400                    |
+| **Total AV/LD/MD**   | **~750-800 trenes/día** |
 
 **Nota**: En cada snapshot (cada 5 min) hay ~150-250 trenes "en circulación" simultáneamente.
 
@@ -53,13 +53,13 @@ Por año:
 
 ### Capacidad del MVP vs. límites
 
-| Recurso | Límite gratuito | Uso al año | Margen |
-|---------|-----------------|------------|--------|
-| GitHub repo size | 5 GB (soft) | ~1-1.5 GB | ✅ 3x de sobra |
-| Git LFS storage | 1 GB | ~1 GB | ⚠️ Justo, usar estrategia de limpieza |
-| Git LFS bandwidth | 1 GB/mes | ~200 MB/mes | ✅ 5x de sobra |
-| GitHub Actions | 2000 min/mes | ~720 min/mes | ✅ 2.7x de sobra |
-| Streamlit Cloud RAM | 1 GB | ~200-400 MB (3 meses cargados) | ✅ 2-3x de sobra |
+| Recurso             | Límite gratuito | Uso al año                     | Margen                                |
+| ------------------- | --------------- | ------------------------------ | ------------------------------------- |
+| GitHub repo size    | 5 GB (soft)     | ~1-1.5 GB                      | ✅ 3x de sobra                        |
+| Git LFS storage     | 1 GB            | ~1 GB                          | ⚠️ Justo, usar estrategia de limpieza |
+| Git LFS bandwidth   | 1 GB/mes        | ~200 MB/mes                    | ✅ 5x de sobra                        |
+| GitHub Actions      | 2000 min/mes    | ~720 min/mes                   | ✅ 2.7x de sobra                      |
+| Streamlit Cloud RAM | 1 GB            | ~200-400 MB (3 meses cargados) | ✅ 2-3x de sobra                      |
 
 **Conclusión: El MVP aguanta 12-24 meses** antes de necesitar migrar a VPS.
 
@@ -99,6 +99,7 @@ Por año:
 ## Fase 0: Preparación y Validación (1-2 días)
 
 ### Objetivos
+
 - Confirmar que los endpoints de Renfe funcionan como se espera
 - Entender la estructura real de los datos
 - Validar la viabilidad técnica antes de escribir código de producción
@@ -106,6 +107,7 @@ Por año:
 ### Tareas
 
 #### 0.1 Exploración de endpoints
+
 ```bash
 # Crear entorno de trabajo
 mkdir open-tren && cd open-tren
@@ -114,19 +116,23 @@ pip install httpx pandas jupyter
 ```
 
 **Endpoints a probar:**
+
 - `https://data.renfe.com/api/3/action/package_list` → lista de datasets
 - `https://data.renfe.com/api/3/action/package_show?id=horarios-viaje-alta-velocidad-larga-media-distancia` → metadatos del feed tiempo real
 - URL del recurso JSON del feed tiempo real (extraer de metadatos)
 - `https://data.renfe.com/api/3/action/package_show?id=avisos` → feed de incidencias
 
 #### 0.2 Documentar estructura de datos
+
 Crear un notebook `exploration.ipynb` que:
+
 1. Descargue un snapshot del feed tiempo real
 2. Analice los campos disponibles (`CODTREN`, `RETRASO`, `LINEA`, etc.)
 3. Descargue el feed de avisos y documente su estructura
 4. Descargue el GTFS y explore `stop_times.txt`, `trips.txt`, `stops.txt`
 
 #### 0.3 Definir el modelo de datos objetivo
+
 ```python
 # Esquema conceptual para circulaciones
 {
@@ -160,6 +166,7 @@ Crear un notebook `exploration.ipynb` que:
 ```
 
 ### Entregable Fase 0
+
 - Notebook con exploración completa de los 3 feeds
 - Documento `DATOS.md` con estructura real de cada endpoint
 - Decisión go/no-go basada en calidad de datos disponibles
@@ -169,6 +176,7 @@ Crear un notebook `exploration.ipynb` que:
 ## Fase 1: Pipeline de Ingesta (3-5 días)
 
 ### Objetivos
+
 - Capturar datos de forma automatizada y fiable
 - Almacenar histórico desde el día 1
 - Código limpio y mantenible
@@ -226,6 +234,7 @@ open-tren/
 ### Tareas
 
 #### 1.1 Configuración del proyecto
+
 ```toml
 # pyproject.toml
 [project]
@@ -246,6 +255,7 @@ dashboard = ["streamlit>=1.30", "plotly>=5.18", "folium>=0.15"]
 ```
 
 #### 1.2 Implementar fetchers
+
 ```python
 # src/fetchers/tiempo_real.py
 import httpx
@@ -256,8 +266,8 @@ import json
 async def fetch_tiempo_real() -> dict:
     """Descarga el feed de tiempo real de Renfe."""
     # URL real a extraer de la exploración en Fase 0
-    url = "https://tiempo-real.renfe.com/..."  
-    
+    url = "https://tiempo-real.renfe.com/..."
+
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.get(url)
         response.raise_for_status()
@@ -268,13 +278,14 @@ def save_snapshot(data: dict, base_path: Path) -> Path:
     now = datetime.utcnow()
     dir_path = base_path / "raw" / "tiempo_real" / now.strftime("%Y-%m-%d")
     dir_path.mkdir(parents=True, exist_ok=True)
-    
+
     file_path = dir_path / f"{now.strftime('%H-%M-%S')}.json"
     file_path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
     return file_path
 ```
 
 #### 1.3 Implementar procesador de retrasos
+
 ```python
 # src/processors/calcular_retrasos.py
 import polars as pl
@@ -283,13 +294,13 @@ from datetime import datetime
 def procesar_snapshot(raw_data: dict, gtfs_stop_times: pl.DataFrame) -> pl.DataFrame:
     """
     Transforma snapshot crudo en registros de circulación con retraso calculado.
-    
+
     El feed de Renfe puede incluir campo RETRASO directamente, o puede
     requerir calcularlo comparando hora real vs GTFS.
     """
     # Convertir a DataFrame
     df = pl.DataFrame(raw_data["circulaciones"])  # Ajustar según estructura real
-    
+
     # Normalizar campos
     df = df.with_columns([
         pl.col("CODTREN").alias("codigo_tren"),
@@ -297,10 +308,10 @@ def procesar_snapshot(raw_data: dict, gtfs_stop_times: pl.DataFrame) -> pl.DataF
         pl.col("RETRASO").cast(pl.Int32).alias("retraso_minutos"),
         pl.lit(datetime.utcnow()).alias("timestamp_captura"),
     ])
-    
+
     # Enriquecer con datos GTFS si es necesario
     # ...
-    
+
     return df.select([
         "timestamp_captura",
         "codigo_tren",
@@ -311,33 +322,34 @@ def procesar_snapshot(raw_data: dict, gtfs_stop_times: pl.DataFrame) -> pl.DataF
 ```
 
 #### 1.4 Configurar GitHub Actions
+
 ```yaml
 # .github/workflows/captura_tiempo_real.yml
 name: Captura Tiempo Real
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Cada 5 minutos
-  workflow_dispatch:        # Permite ejecución manual
+    - cron: "*/5 * * * *" # Cada 5 minutos
+  workflow_dispatch: # Permite ejecución manual
 
 jobs:
   captura:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
-      
+          python-version: "3.12"
+          cache: "pip"
+
       - name: Install dependencies
         run: pip install -e .
-      
+
       - name: Ejecutar captura
         run: python scripts/captura_tiempo_real.py
-      
+
       - name: Commit datos
         run: |
           git config user.name "GitHub Actions"
@@ -348,13 +360,14 @@ jobs:
 ```
 
 #### 1.5 Agregación diaria (job nocturno)
+
 ```yaml
 # .github/workflows/agregacion_diaria.yml
 name: Agregación Diaria
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 2 AM UTC
+    - cron: "0 2 * * *" # 2 AM UTC
 
 jobs:
   agregar:
@@ -363,20 +376,21 @@ jobs:
       # ... setup ...
       - name: Agregar snapshots del día anterior
         run: python scripts/agregar_dia.py --fecha yesterday
-      
+
       - name: Generar estadísticas
         run: python scripts/generar_stats.py
 ```
 
 #### 1.6 Compactación mensual (mantener repo pequeño)
+
 ```yaml
 # .github/workflows/compactacion_mensual.yml
 name: Compactación Mensual
 
 on:
   schedule:
-    - cron: '0 3 1 * *'  # Día 1 de cada mes, 3 AM UTC
-  workflow_dispatch:      # Permite ejecución manual
+    - cron: "0 3 1 * *" # Día 1 de cada mes, 3 AM UTC
+  workflow_dispatch: # Permite ejecución manual
 
 jobs:
   compactar:
@@ -384,20 +398,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true       # Importante: descargar archivos LFS
-      
+          lfs: true # Importante: descargar archivos LFS
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
-      
+          python-version: "3.12"
+          cache: "pip"
+
       - name: Install dependencies
         run: pip install -e .
-      
+
       - name: Compactar meses antiguos (>3 meses)
         run: python scripts/compactar_historico.py
-      
+
       - name: Commit cambios
         run: |
           git config user.name "GitHub Actions"
@@ -421,41 +435,42 @@ import streamlit as st
 @st.cache_data(ttl=300)  # Cache 5 minutos, luego relee
 def cargar_circulaciones_recientes(horas: int = 6) -> pl.DataFrame:
     """Carga datos de las últimas N horas."""
-    
+
     # Los parquet están en el repo clonado
     data_dir = Path("data/processed/circulaciones")
     mes_actual = datetime.now().strftime("%Y-%m")
-    
+
     df = pl.read_parquet(data_dir / f"{mes_actual}.parquet")
-    
+
     corte = datetime.now() - timedelta(hours=horas)
     return df.filter(pl.col("timestamp") > corte)
 
 @st.cache_data(ttl=3600)  # Cache 1 hora para históricos
 def cargar_historico(meses: int = 3) -> pl.DataFrame:
     """Carga los últimos N meses completos."""
-    
+
     data_dir = Path("data/processed/circulaciones")
     archivos = sorted(data_dir.glob("*.parquet"))[-meses:]
-    
+
     return pl.concat([pl.read_parquet(f) for f in archivos])
 
 @st.cache_data(ttl=3600)
 def cargar_estadisticas_historicas() -> pl.DataFrame:
     """Carga estadísticas agregadas de meses compactados."""
-    
+
     archive_dir = Path("data/processed/circulaciones/archive")
     if not archive_dir.exists():
         return pl.DataFrame()
-    
+
     archivos = list(archive_dir.glob("*-stats.parquet"))
     if not archivos:
         return pl.DataFrame()
-    
+
     return pl.concat([pl.read_parquet(f) for f in archivos])
 ```
 
 **Flujo de actualización:**
+
 1. GitHub Actions hace commit de nuevos datos cada 5 min
 2. Streamlit Cloud detecta el push (webhook)
 3. En el siguiente request de un usuario (tras expirar caché), Streamlit hace `git pull`
@@ -464,11 +479,13 @@ def cargar_estadisticas_historicas() -> pl.DataFrame:
 **El caché `@st.cache_data`** es clave: evita releer los archivos en cada visita. Con `ttl=300` (5 minutos), los datos se refrescan con frecuencia suficiente sin sobrecargar.
 
 **Opción A: Datos en el repo (MVP)**
+
 - Pros: Simple, versionado automático, gratis
 - Contras: Límite ~1GB en GitHub, commits frecuentes ensucian historial
 - Mitigación: Usar Git LFS para Parquet, `.gitignore` para JSON crudos antiguos
 
 **Opción B: Cloudflare R2 (Producción)**
+
 - Pros: S3-compatible, egress gratis, 10GB gratis/mes
 - Contras: Requiere configuración adicional
 - Cuándo migrar: Cuando los datos superen 500MB
@@ -478,6 +495,7 @@ def cargar_estadisticas_historicas() -> pl.DataFrame:
 Git LFS (Large File Storage) evita que el repo se hinche con archivos grandes. Git normal guarda **todas las versiones** de cada archivo. Con LFS, solo guarda un "puntero" y el archivo real va a un storage separado.
 
 **Configuración inicial:**
+
 ```bash
 # Instalar Git LFS (una vez)
 git lfs install
@@ -491,6 +509,7 @@ git commit -m "Configurar Git LFS para Parquet"
 ```
 
 **Límites gratuitos de Git LFS en GitHub:**
+
 - Storage: 1 GB
 - Bandwidth: 1 GB/mes
 
@@ -513,6 +532,7 @@ data/
 ```
 
 **Job de compactación (ejecutar mensualmente):**
+
 ```python
 # scripts/compactar_historico.py
 import polars as pl
@@ -527,9 +547,9 @@ def compactar_mes_antiguo(mes: str):
     ruta = Path(f"data/processed/circulaciones/{mes}.parquet")
     if not ruta.exists():
         return
-    
+
     df = pl.read_parquet(ruta)
-    
+
     # Agregar a nivel diario
     stats = df.group_by([
         pl.col("timestamp").dt.date().alias("fecha"),
@@ -545,11 +565,11 @@ def compactar_mes_antiguo(mes: str):
         (pl.col("retraso_minutos") > 15).sum().alias("retraso_grave"),
         (pl.col("retraso_minutos") > 30).sum().alias("retraso_muy_grave"),
     ])
-    
+
     # Guardar agregado (~100 KB vs ~60 MB original)
     Path("data/processed/circulaciones/archive").mkdir(exist_ok=True)
     stats.write_parquet(f"data/processed/circulaciones/archive/{mes}-stats.parquet")
-    
+
     # Borrar el archivo detallado
     ruta.unlink()
     print(f"Compactado {mes}: {len(df):,} filas → {len(stats):,} filas")
@@ -565,11 +585,13 @@ if __name__ == "__main__":
 ```
 
 **Resultado con compactación:**
+
 - Últimos 3 meses: detalle completo (~200 MB)
 - Histórico: solo agregados (~1 MB/año)
 - **Total después de 5 años: ~250 MB** (muy dentro de los límites)
 
 ### Entregables Fase 1
+
 - Pipeline funcionando con capturas cada 5 min
 - Primeros días de datos históricos acumulándose
 - Tests básicos para fetchers y procesadores
@@ -580,6 +602,7 @@ if __name__ == "__main__":
 ## Fase 2: Dashboard MVP (5-7 días)
 
 ### Objetivos
+
 - Dashboard funcional accesible públicamente
 - Diseño responsive (mobile-first)
 - Tres vistas principales: Estado Actual, Incidencias, Histórico básico
@@ -587,6 +610,7 @@ if __name__ == "__main__":
 ### Stack elegido: Streamlit
 
 **Justificación:**
+
 - Desarrollo rapidísimo (1 archivo Python = app completa)
 - Streamlit Cloud gratis con dominio `*.streamlit.app`
 - Componentes responsive por defecto
@@ -640,7 +664,7 @@ st.markdown("""
 <style>
     /* Mobile-first */
     .stMetric { padding: 0.5rem; }
-    
+
     @media (max-width: 768px) {
         .block-container { padding: 1rem; }
         [data-testid="column"] { width: 100% !important; }
@@ -703,7 +727,7 @@ for inc in incidencias:
         "MEDIA": "🟡",
         "BAJA": "🟢"
     }.get(inc.severidad, "⚪")
-    
+
     with st.expander(f"{severity_color} {inc.titulo}", expanded=inc.severidad == "ALTA"):
         st.write(f"**Tipo:** {inc.tipo}")
         st.write(f"**Líneas afectadas:** {', '.join(inc.lineas)}")
@@ -772,14 +796,14 @@ import polars as pl
 
 def render_mapa_red(circulaciones: pl.DataFrame, estaciones: pl.DataFrame):
     """Renderiza mapa con estado de trenes."""
-    
+
     # Centro de España
     m = folium.Map(
         location=[40.4168, -3.7038],
         zoom_start=6,
         tiles="cartodbpositron"  # Tiles limpios
     )
-    
+
     # Añadir marcadores de estaciones principales
     for est in estaciones.iter_rows(named=True):
         folium.CircleMarker(
@@ -789,11 +813,11 @@ def render_mapa_red(circulaciones: pl.DataFrame, estaciones: pl.DataFrame):
             fill=True,
             popup=est["nombre"]
         ).add_to(m)
-    
+
     # Añadir trenes en circulación
     for tren in circulaciones.iter_rows(named=True):
         color = get_color_retraso(tren["retraso_minutos"])
-        
+
         folium.Marker(
             location=[tren["lat"], tren["lon"]],
             icon=folium.Icon(color=color, icon="train", prefix="fa"),
@@ -803,7 +827,7 @@ def render_mapa_red(circulaciones: pl.DataFrame, estaciones: pl.DataFrame):
                 Retraso: {tren['retraso_minutos']} min
             """
         ).add_to(m)
-    
+
     # Renderizar (responsive)
     st_folium(m, use_container_width=True, height=500)
 
@@ -847,6 +871,7 @@ httpx>=0.27
 ```
 
 ### Entregables Fase 2
+
 - Dashboard desplegado en `open-tren.streamlit.app` (o similar)
 - 3 páginas funcionales: Estado Actual, Incidencias, Histórico
 - Diseño responsive probado en móvil
@@ -857,24 +882,28 @@ httpx>=0.27
 ## Fase 3: Refinamiento y Features Adicionales (2-4 semanas)
 
 ### 3.1 Mejoras de UX
+
 - [ ] Dark mode toggle
 - [ ] Selector de idioma (ES/EN)
 - [ ] PWA para instalación en móvil
 - [ ] Notificaciones push para incidencias (vía web push o Telegram bot)
 
 ### 3.2 Mejoras de datos
+
 - [ ] Añadir feed de Cercanías (GTFS-RT Protobuf)
 - [ ] Scraper para Ouigo (usando librería existente)
 - [ ] Integrar informes CNMC trimestrales
 - [ ] Geolocalización de trenes en ruta (interpolar posición)
 
 ### 3.3 Análisis avanzado
+
 - [ ] Predicción de retrasos por hora/día de la semana
 - [ ] Detección de patrones (ej: "los viernes hay más retrasos")
 - [ ] Comparativa con años anteriores
 - [ ] Correlación retrasos vs. meteorología
 
 ### 3.4 API pública
+
 - [ ] Endpoint REST para consultar datos históricos
 - [ ] Documentación OpenAPI
 - [ ] Rate limiting básico
@@ -883,6 +912,7 @@ httpx>=0.27
 ### 3.5 Migración a VPS (cuando el MVP se quede corto)
 
 **Cuándo migrar** (cualquiera de estos triggers):
+
 - Repo supera 1 GB y la compactación no es suficiente
 - Más de 20-30 usuarios simultáneos (Streamlit Cloud se ralentiza)
 - Necesitas queries complejas sobre todo el histórico
@@ -923,9 +953,10 @@ df = pl.read_database(
 ```
 
 **Docker Compose para VPS:**
+
 ```yaml
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 services:
   db:
     image: timescale/timescaledb:latest-pg15
@@ -933,14 +964,14 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    
+
   dashboard:
     build: ./dashboard
     depends_on:
       - db
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db/trenes
-    
+
   nginx:
     image: nginx:alpine
     ports:
@@ -955,6 +986,7 @@ volumes:
 ```
 
 **Coste estimado en VPS:**
+
 - Hetzner CX22: €4.5/mes (2 vCPU, 4GB RAM, 40GB SSD)
 - Dominio: ~€10/año
 - **Total: ~€60/año**
@@ -973,6 +1005,7 @@ Semana 4+: ██████████  Fase 3 (mejoras iterativas)
 ```
 
 **Hitos clave:**
+
 - **Día 2**: Exploración completa, decisión go/no-go
 - **Día 7**: Pipeline capturando datos automáticamente
 - **Día 14**: Dashboard MVP público con datos reales
@@ -999,31 +1032,34 @@ Triggers para migrar a VPS:
 
 ## Riesgos y Mitigaciones
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|--------------|---------|------------|
-| Endpoint de Renfe cambia sin aviso | Media | Alto | Monitorizar errores, alertas en Telegram |
-| Rate limiting de Renfe | Baja | Medio | Empezar con 5 min, reducir si hay problemas |
-| GitHub Actions límite de minutos | Baja | Medio | 2000 min/mes gratis, suficiente para MVP |
-| Datos de baja calidad/incompletos | Media | Medio | Validación en pipeline, logging detallado |
-| GTFS no actualizado por Renfe | Baja | Bajo | Detectar cambios, alertar para revisión manual |
+| Riesgo                             | Probabilidad | Impacto | Mitigación                                     |
+| ---------------------------------- | ------------ | ------- | ---------------------------------------------- |
+| Endpoint de Renfe cambia sin aviso | Media        | Alto    | Monitorizar errores, alertas en Telegram       |
+| Rate limiting de Renfe             | Baja         | Medio   | Empezar con 5 min, reducir si hay problemas    |
+| GitHub Actions límite de minutos   | Baja         | Medio   | 2000 min/mes gratis, suficiente para MVP       |
+| Datos de baja calidad/incompletos  | Media        | Medio   | Validación en pipeline, logging detallado      |
+| GTFS no actualizado por Renfe      | Baja         | Bajo    | Detectar cambios, alertar para revisión manual |
 
 ---
 
 ## Recursos y Referencias
 
 **Documentación técnica:**
+
 - [API CKAN v3](https://docs.ckan.org/en/latest/api/)
 - [Especificación GTFS](https://gtfs.org/schedule/reference/)
 - [Streamlit docs](https://docs.streamlit.io/)
 - [DuckDB Python API](https://duckdb.org/docs/api/python/overview)
 
 **Proyectos de referencia:**
+
 - [deutsche-bahn-data](https://github.com/piebro/deutsche-bahn-data) - Patrón de archivado
 - [railway-opendata](https://github.com/MarcoBuster/railway-opendata) - Arquitectura scraper
 - [renfe-cli](https://github.com/gerardcl/renfe-cli) - Parsing GTFS Renfe
 - [rijdendetreinen.nl](https://www.rijdendetreinen.nl/en/open-data) - Modelo de datos abiertos
 
 **Feeds de Renfe:**
+
 - [Portal data.renfe.com](https://data.renfe.com/)
 - [GTFS AV/LD/MD](https://data.renfe.com/dataset/horarios-de-alta-velocidad-larga-distancia-y-media-distancia)
 - [Avisos](https://data.renfe.com/dataset/avisos)

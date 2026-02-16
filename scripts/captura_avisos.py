@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from src.config import RAW_DATA_DIR
+from src.config import DEFAULT_USER_AGENT, RAW_DATA_DIR
 from src.fetchers import AvisosFetcher, FetcherError
 from src.storage import save_snapshot
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 async def main() -> None:
     """Función principal."""
     try:
-        async with AvisosFetcher() as fetcher:
+        async with AvisosFetcher(user_agent=DEFAULT_USER_AGENT) as fetcher:
             result = await fetcher.fetch()
             file_path = save_snapshot(result.data, result.timestamp, "avisos", RAW_DATA_DIR)
             logger.info("Avisos guardados: %s", file_path)

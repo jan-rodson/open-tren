@@ -14,6 +14,11 @@ GTFS_RT_URL: str = "https://gtfsrt.renfe.com/trip_updates_LD.json"
 GTFS_STATIC_URL: str = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip"
 AVISOS_URL: str = "https://www.renfe.com/content/renfe/es/es/grupo-renfe/comunicacion/renfe-al-dia/avisos/jcr:content/root/responsivegrid/rfincidentreports_co.noticeresults.json"
 
+# User agent por defecto
+DEFAULT_USER_AGENT: str = (
+    "Mozilla/5.0 (compatible; OpenTren/0.1.0; +https://github.com/jan-rodson/open-tren)"
+)
+
 # Frecuencia de captura (segundos)
 CAPTURE_INTERVAL_SECONDS: int = 300  # 5 minutos
 

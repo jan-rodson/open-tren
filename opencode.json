@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "logLevel": "INFO",
+  "permission": {
+    "edit": "ask",
+    "write": "ask",
+    "bash": {
+      "git commit *": "ask",
+      "git push *": "ask",
+      "git add *": "ask",
+      "git reset *": "ask",
+      "git revert *": "ask"
+    }
+  },
+  "command": {
+    "test": {
+      "template": "uv run pytest tests/ -v",
+      "description": "Ejecuta todos los tests"
+    },
+    "lint": {
+      "template": "uv run ruff check .",
+      "description": "Verifica estilo de código"
+    },
+    "format": {
+      "template": "uv run ruff format .",
+      "description": "Formatea código"
+    },
+    "typecheck": {
+      "template": "uv run basedpyright",
+      "description": "Verifica tipos"
+    }
+  },
+  "watcher": {
+    "ignore": [
+      "data/",
+      ".venv/",
+      "__pycache__/",
+      "*.pyc",
+      ".ruff_cache/",
+      ".pytest_cache/",
+      "*.egg-info/",
+      ".git/",
+      ".coverage",
+      "htmlcov/"
+    ]
+  },
+  "instructions": ["AGENTS.md", "docs/steering/"]
+}

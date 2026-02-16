@@ -22,7 +22,7 @@ def _create_fake_zip() -> bytes:
 
 
 @pytest.mark.asyncio
-async def test_fetch_gtfs_static_success():
+async def test_fetch_gtfs_static_success(test_user_agent: str):
     """Test de fetch exitoso de GTFS estático."""
     url = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip"
     fake_zip = _create_fake_zip()
@@ -30,7 +30,7 @@ async def test_fetch_gtfs_static_success():
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(200, content=fake_zip))
 
-        fetcher = GtfsStaticFetcher(url=url)
+        fetcher = GtfsStaticFetcher(user_agent=test_user_agent, url=url)
         result = await fetcher.fetch()
 
         assert result.data == fake_zip
@@ -43,14 +43,14 @@ async def test_fetch_gtfs_static_success():
 
 
 @pytest.mark.asyncio
-async def test_fetch_gtfs_static_invalid_zip():
+async def test_fetch_gtfs_static_invalid_zip(test_user_agent: str):
     """Test de respuesta que no es un ZIP válido."""
     url = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip"
 
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(200, content=b"not a zip"))
 
-        fetcher = GtfsStaticFetcher(url=url)
+        fetcher = GtfsStaticFetcher(user_agent=test_user_agent, url=url)
 
         with pytest.raises(FetcherError) as exc_info:
             await fetcher.fetch()
@@ -59,7 +59,7 @@ async def test_fetch_gtfs_static_invalid_zip():
 
 
 @pytest.mark.asyncio
-async def test_fetch_gtfs_static_no_txt_files():
+async def test_fetch_gtfs_static_no_txt_files(test_user_agent: str):
     """Test de ZIP sin archivos .txt (no es GTFS válido)."""
     url = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip"
 
@@ -71,7 +71,7 @@ async def test_fetch_gtfs_static_no_txt_files():
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(200, content=buffer.getvalue()))
 
-        fetcher = GtfsStaticFetcher(url=url)
+        fetcher = GtfsStaticFetcher(user_agent=test_user_agent, url=url)
 
         with pytest.raises(FetcherError) as exc_info:
             await fetcher.fetch()
@@ -80,14 +80,14 @@ async def test_fetch_gtfs_static_no_txt_files():
 
 
 @pytest.mark.asyncio
-async def test_fetch_gtfs_static_not_found():
+async def test_fetch_gtfs_static_not_found(test_user_agent: str):
     """Test de 404 al obtener GTFS estático."""
     url = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip"
 
     with respx.mock:
         respx.get(url).mock(return_value=httpx.Response(404))
 
-        fetcher = GtfsStaticFetcher(url=url)
+        fetcher = GtfsStaticFetcher(user_agent=test_user_agent, url=url)
 
         with pytest.raises(FetcherError) as exc_info:
             await fetcher.fetch()
@@ -96,14 +96,14 @@ async def test_fetch_gtfs_static_not_found():
 
 
 @pytest.mark.asyncio
-async def test_custom_timeout():
+async def test_custom_timeout(test_user_agent: str):
     """Test de timeout personalizado para GTFS estático."""
     url = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip"
 
     with respx.mock:
         respx.get(url).mock(side_effect=httpx.ConnectTimeout("Connection timeout"))
 
-        fetcher = GtfsStaticFetcher(url=url, timeout=0.1)
+        fetcher = GtfsStaticFetcher(user_agent=test_user_agent, url=url, timeout=0.1)
 
         with pytest.raises(FetcherError):
             await fetcher.fetch()

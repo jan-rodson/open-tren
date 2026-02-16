@@ -2,7 +2,7 @@
 
 **Fecha:** 15 de febrero de 2026  
 **Estado:** ✅ COMPLETADA  
-**Rama:** feat/ingestion-pipeline  
+**Rama:** feat/ingestion-pipeline
 
 ---
 
@@ -63,21 +63,23 @@ Esta fase implementa el pipeline de ingesta de datos ferroviarios, capturando au
 ### 3.1 Fetchers (`src/fetchers/`)
 
 #### BaseFetcher (`base.py`)
+
 Clase base abstracta para todos los fetchers:
 
 ```python
 class BaseFetcher(ABC):
     DEFAULT_TIMEOUT = 30.0
     MAX_RETRIES = 3
-    
+
     async def fetch(self) -> FetcherResult:
         # Implementado por subclases
-        
+
     async def _http_get(self, url: str, as_json: bool = True) -> FetcherResult:
         # Con reintentos exponenciales usando tenacity
 ```
 
 **Características:**
+
 - Context manager asíncrono (`async with`)
 - Reintentos automáticos con backoff exponencial
 - Timeout configurable
@@ -85,26 +87,32 @@ class BaseFetcher(ABC):
 - Manejo centralizado de errores HTTP
 
 #### GtfsRtFetcher (`gtfs_rt.py`)
+
 Captura el feed de tiempo real GTFS-RT:
 
 **Datos capturados:**
+
 - `tripId`: Identificador del viaje (formato: `[número tren]-[YYYY]-[MM]-[DD]`)
 - `delay`: Retraso en segundos (puede ser negativo para adelantos)
 - `scheduleRelationship`: Estado del viaje (SCHEDULED, etc.)
 
 #### AvisosFetcher (`avisos.py`)
+
 Captura avisos e incidencias:
 
 **Datos capturados:**
+
 - `paragraph`: Texto descriptivo del aviso
 - `chipText`: Fecha o período del aviso
 - `link`: URL relativa al detalle
 - `tags`: Etiquetas geográficas (Aragón, Cataluña, etc.)
 
 #### GtfsStaticFetcher (`gtfs_static.py`)
+
 Descarga el GTFS estático completo:
 
 **Validación implementada:**
+
 - Verificación de ZIP válido
 - Chequeo de archivos GTFS requeridos:
   - `trips.txt` - Viajes programados
@@ -113,6 +121,7 @@ Descarga el GTFS estático completo:
   - `routes.txt` - Rutas
 
 **Estructura de almacenamiento:**
+
 ```
 data/gtfs/
 ├── google_transit_YYYYMMDD_HHMMSS.zip  # Backup versionado
@@ -141,6 +150,7 @@ def save_snapshot(
 ```
 
 **Estructura de directorios:**
+
 ```
 data/raw/
 ├── tiempo_real/
@@ -161,6 +171,7 @@ data/raw/
 ```
 
 **Características:**
+
 - Nombres de archivo con timestamp ISO
 - JSON con indentación legible
 - Creación automática de directorios
@@ -169,17 +180,20 @@ data/raw/
 ### 3.3 Scripts (`scripts/`)
 
 #### captura_tiempo_real.py
+
 ```bash
 uv run python scripts/captura_tiempo_real.py
 ```
 
 Flujo:
+
 1. Crea `GtfsRtFetcher()`
 2. Ejecuta `fetch()` con reintentos
 3. Guarda snapshot en `data/raw/tiempo_real/`
 4. Loguea resultado
 
 #### captura_avisos.py
+
 ```bash
 uv run python scripts/captura_avisos.py
 ```
@@ -187,11 +201,13 @@ uv run python scripts/captura_avisos.py
 Flujo idéntico para avisos.
 
 #### actualizar_gtfs.py
+
 ```bash
 uv run python scripts/actualizar_gtfs.py
 ```
 
 Flujo:
+
 1. Descarga ZIP con `GtfsStaticFetcher`
 2. Valida contenido GTFS
 3. Guarda con timestamp
@@ -222,13 +238,13 @@ TIPOS_SERVICIO = ("AVE", "AVLO", "ALVIA", "EUROMED", "MD", "Intercity", "Trenhot
 
 ## 4. Tests Implementados
 
-| Módulo | Cobertura |
-|--------|-----------|
-| `fetchers/base.py` | 95% |
-| `fetchers/gtfs_rt.py` | 100% |
-| `fetchers/avisos.py` | 100% |
-| `fetchers/gtfs_static.py` | 100% |
-| `storage/` | 83% |
+| Módulo                    | Cobertura |
+| ------------------------- | --------- |
+| `fetchers/base.py`        | 95%       |
+| `fetchers/gtfs_rt.py`     | 100%      |
+| `fetchers/avisos.py`      | 100%      |
+| `fetchers/gtfs_static.py` | 100%      |
+| `storage/`                | 83%       |
 
 ---
 
@@ -264,6 +280,7 @@ dev = [
 **Decisión:** Usar `uv` como gestor de dependencias
 
 **Justificación:**
+
 - Instalación más rápida
 - Resolución de dependencias más eficiente
 - Compatible con `pyproject.toml`
@@ -274,6 +291,7 @@ dev = [
 **Decisión:** Guardar snapshots JSON crudos en lugar de procesados
 
 **Justificación:**
+
 - Permite re-procesar si cambia la lógica
 - Facilita debugging
 - Datos de respaldo en formato original
@@ -284,6 +302,7 @@ dev = [
 **Decisión:** Excepciones personalizadas (`FetcherError`)
 
 **Justificación:**
+
 - Mensajes de error claros con contexto (URL, status code)
 - Facilita debugging en producción
 - Permite diferenciar tipos de errores
@@ -293,6 +312,7 @@ dev = [
 **Decisión:** Usar `respx` en lugar de `unittest.mock`
 
 **Justificación:**
+
 - Mock específico para `httpx`
 - Sintaxis más limpia
 - Soporte para async/await
@@ -302,7 +322,7 @@ dev = [
 
 ## 7. Próximos Pasos
 
-1. **Validación de respuestas y procesadores de datos** 
+1. **Validación de respuestas y procesadores de datos**
 2. **Almacenamiento en Parquet/BDD**
 3. **Dashboard MVP**
 

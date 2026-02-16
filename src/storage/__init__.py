@@ -3,10 +3,11 @@
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 
 def save_snapshot(
-    data: dict | list,
+    data: dict[str, Any] | list[Any],  # Any necesario para datos JSON arbitrarios
     timestamp: datetime,
     subdir: str,
     base_path: Path,
