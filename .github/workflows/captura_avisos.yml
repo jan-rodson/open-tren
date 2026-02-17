@@ -1,0 +1,35 @@
+name: Captura Avisos
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Cada hora en punto
+  workflow_dispatch:
+
+jobs:
+  captura:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Ejecutar captura
+        run: uv run python scripts/captura_avisos.py
+
+      - name: Get timestamp
+        id: timestamp
+        run: echo "time=$(date -u +%Y-%m-%d-%H-%M-%S)" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact with date
+        uses: actions/upload-artifact@v4
+        with:
+          name: avisos-${{ steps.timestamp.outputs.time }}
+          path: data/raw/avisos/
+          retention-days: 90
