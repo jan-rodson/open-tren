@@ -40,3 +40,7 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Streamlit
+streamlit/.env
+.streamlit/
