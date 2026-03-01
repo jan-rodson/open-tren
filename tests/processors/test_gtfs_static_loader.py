@@ -40,10 +40,10 @@ def test_cargar_viajes_formato_hora_invalido(tmp_path: Path):
     (gtfs_dir / "trips.txt").write_text("trip_id,service_id,route_id\nT120260219-2026-02-19,1,R1\n")
     (gtfs_dir / "stop_times.txt").write_text(
         "trip_id,stop_id,stop_sequence,arrival_time,departure_time\n"
-        "T120260219-2026-02-19,MAD,1,invalid,08:00:00\n"
+        "T120260219-2026-02-19,17000,1,invalid,08:00:00\n"
     )
     (gtfs_dir / "routes.txt").write_text("route_id,route_short_name\nR1,AVE\n")
-    (gtfs_dir / "stops.txt").write_text("stop_id,stop_name,stop_lat,stop_lon\nMAD,M,40,3\n")
+    (gtfs_dir / "stops.txt").write_text("stop_id,stop_name,stop_lat,stop_lon\n17000,M,40,3\n")
 
     loader = GtfsStaticLoader(gtfs_dir)
 
@@ -87,38 +87,6 @@ def test_cargar_viajes_fecha_invalida(tmp_path: Path):
         loader.cargar_viajes()
 
 
-def test_cargar_paradas_exitoso(gtfs_static_files: Path):
-    """Test carga exitosa de paradas."""
-    loader = GtfsStaticLoader(gtfs_static_files)
-    paradas = loader.cargar_paradas()
-
-    assert len(paradas) == 3
-    assert paradas[0].stop_id == "MAD"
-    assert paradas[0].stop_nombre == "Madrid Atocha"
-    assert paradas[0].stop_lat == 40.398
-    assert paradas[0].stop_lon == -3.693
-
-
-def test_cargar_paradas_campos_faltantes(tmp_path: Path):
-    """Test que ignora paradas con campos obligatorios faltantes."""
-    gtfs_dir = tmp_path / "gtfs"
-    gtfs_dir.mkdir()
-
-    (gtfs_dir / "stops.txt").write_text(
-        "stop_id,stop_name,stop_lat,stop_lon\nMAD,Madrid,40,3\nBCN,,41,2\n"
-    )
-    (gtfs_dir / "trips.txt").write_text("trip_id,service_id,route_id\nT1,1,R1\n")
-    (gtfs_dir / "routes.txt").write_text("route_id,route_short_name\nR1,AVE\n")
-    (gtfs_dir / "stop_times.txt").write_text(
-        "trip_id,stop_id,stop_sequence,arrival_time\nT1,MAD,1,08:00:00\n"
-    )
-
-    loader = GtfsStaticLoader(gtfs_dir)
-    paradas = loader.cargar_paradas()
-
-    assert len(paradas) == 1
-
-
 def test_cargar_rutas_exitoso(gtfs_static_files: Path):
     """Test carga exitosa de rutas."""
     loader = GtfsStaticLoader(gtfs_static_files)
@@ -128,11 +96,13 @@ def test_cargar_rutas_exitoso(gtfs_static_files: Path):
 
     ruta_r1 = next(r for r in rutas if r.route_id == "R1")
     assert ruta_r1.tipo_servicio == "AVE"
-    assert ruta_r1.paradas == ["MAD", "BCN", "ZAZ"]
+    assert ruta_r1.origen_nombre == "Madrid Atocha"
+    assert ruta_r1.destino_nombre == "Zaragoza Delicias"
 
     ruta_r2 = next(r for r in rutas if r.route_id == "R2")
     assert ruta_r2.tipo_servicio == "AVE"
-    assert ruta_r2.paradas == ["MAD", "ZAZ", "BCN"]
+    assert ruta_r2.origen_nombre == "Madrid Atocha"
+    assert ruta_r2.destino_nombre == "Barcelona Sants"
 
 
 def test_cargar_rutas_route_sin_paradas(tmp_path: Path):
@@ -142,16 +112,17 @@ def test_cargar_rutas_route_sin_paradas(tmp_path: Path):
 
     (gtfs_dir / "trips.txt").write_text("trip_id,service_id,route_id\nT1,1,R1\n")
     (gtfs_dir / "stop_times.txt").write_text(
-        "trip_id,stop_id,stop_sequence,arrival_time\nT1,MAD,1,08:00:00\n"
+        "trip_id,stop_id,stop_sequence,arrival_time\nT1,17000,1,08:00:00\n"
     )
     (gtfs_dir / "routes.txt").write_text("route_id,route_short_name\nR1,AVE\n")
-    (gtfs_dir / "stops.txt").write_text("stop_id,stop_name,stop_lat,stop_lon\nMAD,M,40,3\n")
+    (gtfs_dir / "stops.txt").write_text("stop_id,stop_name,stop_lat,stop_lon\n17000,Madrid,40,3\n")
 
     loader = GtfsStaticLoader(gtfs_dir)
     rutas = loader.cargar_rutas()
 
     assert len(rutas) == 1
-    assert rutas[0].paradas == ["MAD"]
+    assert rutas[0].origen_nombre == "Madrid"
+    assert rutas[0].destino_nombre == "Madrid"
 
 
 def test_extraer_codigo_y_fecha_formato_completo(gtfs_static_files: Path):

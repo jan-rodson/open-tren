@@ -1,6 +1,5 @@
 from .circulacion import (
     Actualizacion,
-    Parada,
     Ruta,
     Viaje,
 )
@@ -8,6 +7,5 @@ from .circulacion import (
 __all__ = [
     "Actualizacion",
     "Viaje",
-    "Parada",
     "Ruta",
 ]

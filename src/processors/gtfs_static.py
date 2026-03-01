@@ -6,7 +6,7 @@ from pathlib import Path
 import polars as pl
 from pydantic import ValidationError
 
-from src.models import Parada, Ruta, Viaje
+from src.models import Ruta, Viaje
 
 logger = logging.getLogger(__name__)
 
@@ -89,65 +89,59 @@ class GtfsStaticLoader:
         logger.info(f"Cargados {len(resultados)} viajes desde {self.trips_path.name}")
         return resultados
 
-    def cargar_paradas(self) -> list[Parada]:
-        """Carga todas las paradas."""
-        stops = pl.read_csv(self.stops_path)
-        resultados: list[Parada] = []
-
-        campos_obligatorios = ["stop_id", "stop_name", "stop_lat", "stop_lon"]
-
-        for idx, row in enumerate(stops.iter_rows(named=True), start=1):
-            campos_faltantes = [c for c in campos_obligatorios if c not in row]
-
-            if campos_faltantes:
-                logger.error(f"Fila {idx} de {self.stops_path.name} incompleta: {campos_faltantes}")
-                continue
-
-            try:
-                resultados.append(
-                    Parada(
-                        stop_id=row["stop_id"],
-                        stop_nombre=row["stop_name"],
-                        stop_lat=row["stop_lat"],
-                        stop_lon=row["stop_lon"],
-                    )
-                )
-            except ValidationError as e:
-                logger.error(f"Fila {idx} de {self.stops_path.name} con datos inválidos: {e}")
-                continue
-
-        logger.info(f"Cargadas {len(resultados)} paradas desde {self.stops_path.name}")
-        return resultados
-
     def cargar_rutas(self) -> list[Ruta]:
-        """Carga rutas con su secuencia de paradas.
+        """Carga rutas con origen y destino como texto.
 
         Returns:
-            Lista de Ruta, una por route_id con sus paradas ordenadas.
+            Lista de Ruta, una por route_id con origen y destino.
         """
         stop_times = pl.read_csv(self.stop_times_path)
         trips = pl.read_csv(self.trips_path)
         routes = pl.read_csv(self.routes_path)
+        stops = pl.read_csv(self.stops_path)
 
-        stop_times_con_ruta = stop_times.join(
+        stop_times_ordered = stop_times.sort(["trip_id", "stop_sequence"])
+
+        stop_times_con_ruta = stop_times_ordered.join(
             trips[["trip_id", "route_id"]], on="trip_id", how="left"
         )
-        stop_times_completo = stop_times_con_ruta.join(
+
+        primer_y_ultima = stop_times_con_ruta.group_by("route_id").agg(
+            [
+                pl.col("stop_id").first().alias("primer_stop_id"),
+                pl.col("stop_id").last().alias("ultimo_stop_id"),
+            ]
+        )
+
+        rutas_con_stops = primer_y_ultima.join(
             routes[["route_id", "route_short_name"]], on="route_id", how="left"
         )
 
-        rutas_agrupadas = stop_times_completo.group_by("route_id", "route_short_name").agg(  # type: ignore[reportUnknownMemberType]
-            [pl.col("stop_id").unique(maintain_order=True).alias("paradas")]  # type: ignore[reportUnknownMemberType]
-        )
+        stops_renamed = stops.rename({"stop_id": "stop_id", "stop_name": "stop_name"})
+
+        rutas_con_nombres = rutas_con_stops.join(
+            stops_renamed[["stop_id", "stop_name"]].unique(),
+            left_on="primer_stop_id",
+            right_on="stop_id",
+            how="left",
+        ).rename({"stop_name": "origen_nombre"})
+
+        rutas_final = rutas_con_nombres.join(
+            stops_renamed[["stop_id", "stop_name"]].unique(),
+            left_on="ultimo_stop_id",
+            right_on="stop_id",
+            how="left",
+        ).rename({"stop_name": "destino_nombre"})
 
         resultados: list[Ruta] = []
-        for row in rutas_agrupadas.iter_rows(named=True):
+        for row in rutas_final.iter_rows(named=True):
             try:
                 resultados.append(
                     Ruta(
                         route_id=row["route_id"],
                         tipo_servicio=row["route_short_name"],
-                        paradas=row["paradas"],
+                        origen_nombre=row["origen_nombre"],
+                        destino_nombre=row["destino_nombre"],
                     )
                 )
             except ValidationError as e:
@@ -188,9 +182,13 @@ class GtfsStaticLoader:
     def _parsear_hora_gtfs(self, hora: str) -> time:
         """Parsea hora GTFS formato H:MM:SS o HH:MM:SS.
 
+        El GTFS puede usar horas > 24 para indicar llegada al día siguiente.
+        En ese caso, convertimos a una hora válida (sin día).
+
         Formatos aceptados:
             - "8:30:00" -> 08:30:00
             - "13:26:00" -> 13:26:00
+            - "25:30:00" -> 01:30:00 (día siguiente)
 
         Raises:
             ValueError: Si el formato es inválido.
@@ -202,5 +200,7 @@ class GtfsStaticLoader:
         h = int(match.group(1))
         m = int(match.group(2))
         s = int(match.group(3))
+
+        h = h % 24
 
         return time(h, m, s)

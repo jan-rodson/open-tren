@@ -1,27 +1,16 @@
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from pydantic import BaseModel, computed_field, field_validator
+from pydantic import BaseModel, computed_field
 
 
 class Ruta(BaseModel):
-    """Ruta con su secuencia de paradas en orden."""
+    """Ruta con origen y destino como texto."""
 
     route_id: str
     tipo_servicio: str
-    paradas: list[str]  # stop_id en orden
-
-    @computed_field
-    @property
-    def origen_id(self) -> str:
-        """ID de la primera parada de la ruta."""
-        return self.paradas[0] if self.paradas else ""
-
-    @computed_field
-    @property
-    def destino_id(self) -> str:
-        """ID de la última parada de la ruta."""
-        return self.paradas[-1] if self.paradas else ""
+    origen_nombre: str
+    destino_nombre: str
 
 
 class Viaje(BaseModel):
@@ -64,31 +53,6 @@ class Viaje(BaseModel):
         if self.tiempo_trayecto_minutos <= 0:
             return Decimal("0")
         return Decimal(self.delay_minutos) / Decimal(self.tiempo_trayecto_minutos) * 100
-
-
-class Parada(BaseModel):
-    """Estación o parada ferroviaria."""
-
-    stop_id: str
-    stop_nombre: str
-    stop_lat: float
-    stop_lon: float
-
-    @field_validator("stop_lat")
-    @classmethod
-    def validate_lat(cls, v: float) -> float:
-        """Valida que la latitud esté en el rango [-90, 90]."""
-        if not -90 <= v <= 90:
-            raise ValueError("latitud debe estar entre -90 y 90")
-        return v
-
-    @field_validator("stop_lon")
-    @classmethod
-    def validate_lon(cls, v: float) -> float:
-        """Valida que la longitud esté en el rango [-180, 180]."""
-        if not -180 <= v <= 180:
-            raise ValueError("longitud debe estar entre -180 y 180")
-        return v
 
 
 class Actualizacion(BaseModel):

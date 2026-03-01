@@ -2,10 +2,7 @@
 
 from datetime import date, time
 
-import pytest
-from pydantic import ValidationError
-
-from src.models import Actualizacion, Parada, Ruta, Viaje
+from src.models import Actualizacion, Ruta, Viaje
 
 
 def test_viaje_delay_minutos():
@@ -67,25 +64,15 @@ def test_viaje_tiempo_trayecto_dia_siguiente():
 
 
 def test_ruta_origen_destino():
-    """Test de computed fields origen_id y destino_id en Ruta."""
+    """Test de Ruta con origen_nombre y destino_nombre."""
     ruta = Ruta(
         route_id="1700037606GL023",
         tipo_servicio="ALVIA",
-        paradas=["17000", "18000", "35001", "37606"],
+        origen_nombre="Madrid Atocha",
+        destino_nombre="Barcelona Sants",
     )
-    assert ruta.origen_id == "17000"
-    assert ruta.destino_id == "37606"
-
-
-def test_ruta_vacia():
-    """Test de ruta sin paradas."""
-    ruta = Ruta(
-        route_id="test",
-        tipo_servicio="TEST",
-        paradas=[],
-    )
-    assert ruta.origen_id == ""
-    assert ruta.destino_id == ""
+    assert ruta.origen_nombre == "Madrid Atocha"
+    assert ruta.destino_nombre == "Barcelona Sants"
 
 
 def test_actualizacion_creacion():
@@ -98,54 +85,6 @@ def test_actualizacion_creacion():
     assert act.trip_id == "0019012026-02-19"
     assert act.delay_segundos == 900
     assert act.schedule_relationship == "SCHEDULED"
-
-
-def test_parada_creacion():
-    """Test de creación básica de Parada."""
-    parada = Parada(
-        stop_id="17000",
-        stop_nombre="Madrid",
-        stop_lat=40.4168,
-        stop_lon=-3.7038,
-    )
-    assert parada.stop_id == "17000"
-    assert parada.stop_nombre == "Madrid"
-    assert -90 <= parada.stop_lat <= 90
-    assert -180 <= parada.stop_lon <= 180
-
-
-def test_parada_coordenadas_fuera_rango():
-    """Test de validación de coordenadas fuera de rango."""
-    with pytest.raises(ValidationError):
-        Parada(
-            stop_id="17000",
-            stop_nombre="Madrid",
-            stop_lat=91,
-            stop_lon=-3.7038,
-        )
-
-
-def test_parada_valores_extremos():
-    """Test de validación de coordenadas en límites válidos."""
-    parada = Parada(
-        stop_id="17000",
-        stop_nombre="Madrid",
-        stop_lat=-90,
-        stop_lon=-180,
-    )
-    assert parada.stop_lat == -90
-    assert parada.stop_lon == -180
-
-
-def test_ruta_una_parada():
-    """Test de ruta con una sola parada (origen == destino)."""
-    ruta = Ruta(
-        route_id="test",
-        tipo_servicio="TEST",
-        paradas=["17000"],
-    )
-    assert ruta.origen_id == "17000"
-    assert ruta.destino_id == "17000"
 
 
 def test_viaje_delay_pct_trayecto_sin_retraso():
